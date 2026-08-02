@@ -87,6 +87,17 @@ export interface SerializedAdminVehicle {
 	updatedAt: string;
 }
 
+export interface SerializedPickupPoint {
+	id: string;
+	name: string;
+	parishCode: string;
+	parish: string;
+	address: string;
+	note: string;
+	kind: 'parish' | 'airport';
+	airportCode?: 'KIN' | 'MBJ';
+}
+
 export async function fetchAdminBookings(): Promise<SerializedAdminBooking[]> {
 	const { data } = await apiClient.get('/bookings/admin');
 	return data.bookings;
@@ -105,4 +116,9 @@ export async function fetchAdminDamageClaims(): Promise<SerializedAdminDamageCla
 export async function fetchAdminVehicles(): Promise<SerializedAdminVehicle[]> {
 	const { data } = await apiClient.get('/vehicles/admin');
 	return data.vehicles;
+}
+
+export async function fetchPickupPoints(): Promise<SerializedPickupPoint[]> {
+	const { data } = await apiClient.get('/pickup-points');
+	return data.pickupPoints;
 }

@@ -36,11 +36,36 @@ const PARISH_LABELS: Record<string, string> = {
 type TParishSeries = {
 	label: string;
 	series: ApexOptions['series'];
+	maxBookings: number;
+	maxPayouts: number;
+	maxRevenue: number;
 };
+
+const BOOKING_COLOR = process.env.REACT_APP_INFO_COLOR ?? '#4d69fa';
+const PAYOUT_COLOR = process.env.REACT_APP_WARNING_COLOR ?? '#ffcf52';
+const REVENUE_COLOR = process.env.REACT_APP_SUCCESS_COLOR ?? '#46bcaa';
+
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const getAxisMax = (value: number, minimumCeiling: number) => {
+	if (value <= 0) {
+		return minimumCeiling;
+	}
+
+	if (value <= minimumCeiling) {
+		return minimumCeiling;
+	}
+
+	const magnitude = 10 ** Math.floor(Math.log10(value));
+	return Math.ceil((value * 1.15) / magnitude) * magnitude;
+};
+
+const formatThousands = (value: number) =>
+	value >= 10 ? value.toFixed(0) : value.toFixed(1).replace(/\.0$/, '');
 
 const BookingsByLocation = () => {
 	const { themeStatus } = useDarkMode();
-	const { bookings, vehicles, isLoading, error } = useContext(AdminDashboardContext);
+	const { bookings, vehicles, pickupPoints, isLoading, error } = useContext(AdminDashboardContext);
 	const [activeParish, setActiveParish] = useState<string | null>(null);
 
 	const vehicleParishById = useMemo(
@@ -49,6 +74,20 @@ const BookingsByLocation = () => {
 				vehicles.map((vehicle) => [vehicle.id, vehicle.parishCode ?? 'UNSPECIFIED']),
 			),
 		[vehicles],
+	);
+
+	const pickupPointById = useMemo(
+		() =>
+			Object.fromEntries(
+				pickupPoints.map((pickupPoint) => [
+					pickupPoint.id,
+					{
+						label: pickupPoint.name,
+						parishCode: pickupPoint.parishCode,
+					},
+				]),
+			),
+		[pickupPoints],
 	);
 
 	const years = useMemo(() => {
@@ -71,42 +110,58 @@ const BookingsByLocation = () => {
 
 		const bucketMap = new Map<
 			string,
-			{ bookings: number[]; payouts: number[]; revenue: number[]; totalBookings: number }
+			{
+				bookings: number[];
+				payouts: number[];
+				revenue: number[];
+				totalBookings: number;
+				label: string;
+			}
 		>();
 
 		base.forEach((booking) => {
-			const parishCode = vehicleParishById[booking.vehicleId] ?? 'UNSPECIFIED';
+			const fallbackParishCode = vehicleParishById[booking.vehicleId] ?? 'UNSPECIFIED';
+			const pickupPoint = pickupPointById[booking.pickupPointId];
+			const locationCode = booking.pickupPointId || fallbackParishCode;
+			const locationLabel =
+				pickupPoint?.label ??
+				PARISH_LABELS[pickupPoint?.parishCode ?? fallbackParishCode] ??
+				'Other pickup point';
 			const monthIndex = dayjs(booking.startDate).month();
-			const current = bucketMap.get(parishCode) ?? {
+			const current = bucketMap.get(locationCode) ?? {
 				bookings: Array.from({ length: 12 }, () => 0),
 				payouts: Array.from({ length: 12 }, () => 0),
 				revenue: Array.from({ length: 12 }, () => 0),
 				totalBookings: 0,
+				label: locationLabel,
 			};
 
 			current.bookings[monthIndex] += 1;
 			current.payouts[monthIndex] += booking.ownerPayout / 1000;
 			current.revenue[monthIndex] += booking.totalAmount / 1000;
 			current.totalBookings += 1;
-			bucketMap.set(parishCode, current);
+			bucketMap.set(locationCode, current);
 		});
 
 		return Object.fromEntries(
 			Array.from(bucketMap.entries())
 				.sort((a, b) => b[1].totalBookings - a[1].totalBookings)
-				.map(([parishCode, value]) => [
-					parishCode,
+				.map(([locationCode, value]) => [
+					locationCode,
 					{
-						label: PARISH_LABELS[parishCode] ?? parishCode,
+						label: value.label,
 						series: [
 							{ name: 'Bookings', type: 'column', data: value.bookings },
 							{ name: 'Payouts', type: 'column', data: value.payouts },
 							{ name: 'Revenue', type: 'line', data: value.revenue },
 						],
+						maxBookings: Math.max(...value.bookings, 0),
+						maxPayouts: Math.max(...value.payouts, 0),
+						maxRevenue: Math.max(...value.revenue, 0),
 					},
 				]),
 		);
-	}, [bookings, vehicleParishById, year]);
+	}, [bookings, pickupPointById, vehicleParishById, year]);
 
 	const parishCodes = useMemo(() => Object.keys(seriesByParish), [seriesByParish]);
 
@@ -119,6 +174,8 @@ const BookingsByLocation = () => {
 		setActiveParish((current) => (current && parishCodes.includes(current) ? current : parishCodes[0]));
 	}, [parishCodes]);
 
+	const activeSeries = activeParish ? seriesByParish[activeParish] : null;
+
 	const chartOptions: ApexOptions = {
 		chart: {
 			height: 370,
@@ -126,60 +183,85 @@ const BookingsByLocation = () => {
 			stacked: false,
 			toolbar: { show: false },
 		},
-		colors: [
-			process.env.REACT_APP_INFO_COLOR,
-			process.env.REACT_APP_WARNING_COLOR,
-			process.env.REACT_APP_SUCCESS_COLOR,
-		],
+		colors: [BOOKING_COLOR, PAYOUT_COLOR, REVENUE_COLOR],
 		dataLabels: { enabled: false },
 		stroke: { width: [1, 1, 4], curve: 'smooth' },
-		plotOptions: { bar: { borderRadius: 5, columnWidth: '20px' } },
+		fill: { opacity: [0.95, 0.8, 1] },
+		plotOptions: { bar: { borderRadius: 5, columnWidth: '36%', dataLabels: { position: 'top' } } },
 		xaxis: {
-			categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+			categories: MONTH_LABELS,
 		},
 		yaxis: [
 			{
+				min: 0,
+				max: getAxisMax(activeSeries?.maxBookings ?? 0, 4),
+				tickAmount: 4,
 				axisTicks: { show: true },
-				axisBorder: { show: true, color: process.env.REACT_APP_INFO_COLOR },
-				labels: { style: { colors: process.env.REACT_APP_INFO_COLOR } },
+				forceNiceScale: true,
+				decimalsInFloat: 0,
+				axisBorder: { show: true, color: BOOKING_COLOR },
+				labels: {
+					style: { colors: BOOKING_COLOR },
+					formatter: (value) => `${Math.round(value)}`,
+				},
 				title: {
 					text: 'Bookings (count)',
-					style: { color: process.env.REACT_APP_INFO_COLOR },
+					style: { color: BOOKING_COLOR },
 				},
 			},
 			{
 				seriesName: 'Payouts',
+				min: 0,
+				max: getAxisMax(activeSeries?.maxPayouts ?? 0, 10),
+				tickAmount: 5,
 				opposite: true,
 				axisTicks: { show: true },
-				axisBorder: { show: true, color: process.env.REACT_APP_WARNING_COLOR },
-				labels: { style: { colors: process.env.REACT_APP_WARNING_COLOR } },
+				forceNiceScale: true,
+				axisBorder: { show: true, color: PAYOUT_COLOR },
+				labels: {
+					style: { colors: PAYOUT_COLOR },
+					formatter: formatThousands,
+				},
 				title: {
 					text: 'Payouts (thousand JMD)',
-					style: { color: process.env.REACT_APP_WARNING_COLOR },
+					style: { color: PAYOUT_COLOR },
 				},
 			},
 			{
 				seriesName: 'Revenue',
+				min: 0,
+				max: getAxisMax(activeSeries?.maxRevenue ?? 0, 10),
+				tickAmount: 5,
 				opposite: true,
 				axisTicks: { show: true },
-				axisBorder: { show: true, color: process.env.REACT_APP_SUCCESS_COLOR },
-				labels: { style: { colors: process.env.REACT_APP_SUCCESS_COLOR } },
+				forceNiceScale: true,
+				axisBorder: { show: true, color: REVENUE_COLOR },
+				labels: {
+					style: { colors: REVENUE_COLOR },
+					formatter: formatThousands,
+				},
 				title: {
 					text: 'Revenue (thousand JMD)',
-					style: { color: process.env.REACT_APP_SUCCESS_COLOR },
+					style: { color: REVENUE_COLOR },
 				},
 			},
 		],
 		tooltip: {
 			theme: 'dark',
-			fixed: {
-				enabled: true,
-				position: 'topLeft',
-				offsetY: 30,
-				offsetX: 60,
+			shared: true,
+			intersect: false,
+			y: {
+				formatter: (value, context) => {
+					const seriesName = ['Bookings', 'Payouts', 'Revenue'][context?.seriesIndex ?? 0];
+					if (seriesName === 'Bookings') {
+						return `${Math.round(value ?? 0)} bookings`;
+					}
+
+					return `${formatThousands(value ?? 0)}k JMD`;
+				},
 			},
 		},
-		legend: { horizontalAlign: 'left', offsetX: 40 },
+		legend: { horizontalAlign: 'left', offsetX: 12, markers: { fillColors: [BOOKING_COLOR, PAYOUT_COLOR, REVENUE_COLOR] } },
 	};
 
 	return (

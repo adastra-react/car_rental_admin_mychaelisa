@@ -1,8 +1,11 @@
 import axios from 'axios';
 
 export const TOKEN_STORAGE_KEY = 'facit_authToken';
+
+const stripTrailingSlash = (value?: string) => value?.trim().replace(/\/+$/, '');
+
 const apiBaseUrl =
-	process.env.REACT_APP_API_BASE_URL ??
+	stripTrailingSlash(process.env.REACT_APP_API_BASE_URL) ??
 	(process.env.NODE_ENV === 'development' ? 'http://localhost:5001' : undefined);
 
 const apiClient = axios.create({

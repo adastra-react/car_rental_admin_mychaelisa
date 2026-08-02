@@ -14,9 +14,11 @@ import {
 	fetchAdminDamageClaims,
 	fetchAdminPayouts,
 	fetchAdminVehicles,
+	fetchPickupPoints,
 	SerializedAdminBooking,
 	SerializedAdminDamageClaim,
 	SerializedAdminPayout,
+	SerializedPickupPoint,
 	SerializedAdminVehicle,
 } from '../services/adminDashboardApi';
 
@@ -25,6 +27,7 @@ export interface IAdminDashboardContextProps {
 	payouts: SerializedAdminPayout[];
 	claims: SerializedAdminDamageClaim[];
 	vehicles: SerializedAdminVehicle[];
+	pickupPoints: SerializedPickupPoint[];
 	isLoading: boolean;
 	error: string | null;
 	lastUpdatedAt: string | null;
@@ -45,6 +48,7 @@ export const AdminDashboardProvider: FC<IAdminDashboardProviderProps> = ({ child
 	const [payouts, setPayouts] = useState<SerializedAdminPayout[]>([]);
 	const [claims, setClaims] = useState<SerializedAdminDamageClaim[]>([]);
 	const [vehicles, setVehicles] = useState<SerializedAdminVehicle[]>([]);
+	const [pickupPoints, setPickupPoints] = useState<SerializedPickupPoint[]>([]);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [error, setError] = useState<string | null>(null);
 	const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
@@ -55,6 +59,7 @@ export const AdminDashboardProvider: FC<IAdminDashboardProviderProps> = ({ child
 			setPayouts([]);
 			setClaims([]);
 			setVehicles([]);
+			setPickupPoints([]);
 			setError(null);
 			setIsLoading(false);
 			return;
@@ -64,16 +69,19 @@ export const AdminDashboardProvider: FC<IAdminDashboardProviderProps> = ({ child
 		setError(null);
 
 		try {
-			const [nextBookings, nextPayouts, nextClaims, nextVehicles] = await Promise.all([
+			const [nextBookings, nextPayouts, nextClaims, nextVehicles, nextPickupPoints] =
+				await Promise.all([
 				fetchAdminBookings(),
 				fetchAdminPayouts(),
 				fetchAdminDamageClaims(),
 				fetchAdminVehicles(),
-			]);
+				fetchPickupPoints(),
+				]);
 			setBookings(nextBookings);
 			setPayouts(nextPayouts);
 			setClaims(nextClaims);
 			setVehicles(nextVehicles);
+			setPickupPoints(nextPickupPoints);
 			setLastUpdatedAt(new Date().toISOString());
 		} catch (err) {
 			setError(getApiErrorMessage(err));
@@ -93,6 +101,7 @@ export const AdminDashboardProvider: FC<IAdminDashboardProviderProps> = ({ child
 				payouts,
 				claims,
 				vehicles,
+				pickupPoints,
 				isLoading,
 				error,
 				lastUpdatedAt,
