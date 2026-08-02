@@ -4,6 +4,7 @@
 
   [build.environment]
     NODE_VERSION = "20.19.4"
+    CI = "false"
     DISABLE_ESLINT_PLUGIN = "true"
 
 [[redirects]]
