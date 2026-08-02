@@ -140,11 +140,18 @@ const PendingApprovals = () => {
 				) : items.length ? (
 					<>
 						<div className='d-flex flex-wrap gap-2 mb-3'>
-							<Badge color='light' isLight className='px-3 py-2'>
+							<Badge color='primary' isLight className='px-3 py-2'>
 								Total: {items.length}
 							</Badge>
 							{Object.entries(totalsByType).map(([type, count]) => (
-								<Badge key={type} color='light' isLight className='px-3 py-2'>
+								<Badge
+									key={type}
+									color={
+										Object.values(APPROVAL_BADGES).find((badge) => badge.text === type)
+											?.color ?? 'primary'
+									}
+									isLight
+									className='px-3 py-2'>
 									{type}: {count}
 								</Badge>
 							))}

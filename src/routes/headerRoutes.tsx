@@ -2,6 +2,7 @@ import React from 'react';
 import { RouteProps } from 'react-router-dom';
 import {
 	componentPagesMenu,
+	carRentalMenu,
 	dashboardPagesMenu,
 	demoPagesMenu,
 	gettingStartedPagesMenu,
@@ -97,6 +98,10 @@ const headers: RouteProps[] = [
 	{
 		path: demoPagesMenu.crm.subMenu.customersList.path,
 		element: <ProfilePageHeader />,
+	},
+	{
+		path: carRentalMenu.users.path,
+		element: null,
 	},
 	{
 		path: `${demoPagesMenu.crm.subMenu.customerID.path}/:id`,

@@ -187,12 +187,16 @@ const RecentActivity = () => {
 					</div>
 				) : items.length ? (
 					<>
-						<div className='d-flex flex-wrap gap-2 mb-3'>
-							{sourceTotals.map((item) => (
-								<Badge key={item.key} color='light' isLight className='px-3 py-2'>
-									{item.label}: {item.count}
-								</Badge>
-							))}
+							<div className='d-flex flex-wrap gap-2 mb-3'>
+								{sourceTotals.map((item) => (
+									<Badge
+										key={item.key}
+										color={sourceBadgeColor[item.key as IRecentActivityItem['source']]}
+										isLight
+										className='px-3 py-2'>
+										{item.label}: {item.count}
+									</Badge>
+								))}
 							{lastUpdatedAt && (
 								<Badge color='success' isLight className='px-3 py-2'>
 									Updated {dayjs(lastUpdatedAt).fromNow()}

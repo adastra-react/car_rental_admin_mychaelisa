@@ -10,7 +10,7 @@ import SubHeader, {
 } from '../../../layout/SubHeader/SubHeader';
 import Page from '../../../layout/Page/Page';
 import { carRentalMenu } from '../../../menu';
-import Card, { CardBody } from '../../../components/bootstrap/Card';
+import Card, { CardBody, CardHeader, CardLabel, CardSubTitle, CardTitle } from '../../../components/bootstrap/Card';
 import PaginationButtons, {
 	dataPagination,
 	PER_COUNT,
@@ -132,6 +132,47 @@ const UsersListPage = () => {
 			},
 		],
 		[filteredData, users.length],
+	);
+	const dashboardAlerts = useMemo(
+		() => [
+			{
+				key: 'pending-license',
+				show: filteredData.some((u) => u.license?.status === 'pending'),
+				color: 'warning' as const,
+				icon: 'Badge',
+				title: `${filteredData.filter((u) => u.license?.status === 'pending').length} license review${
+					filteredData.filter((u) => u.license?.status === 'pending').length === 1
+						? ''
+						: 's'
+				} pending`,
+				description: 'These users are waiting on manual document approval from the admin team.',
+			},
+			{
+				key: 'restricted',
+				show: filteredData.some((u) => u.accountStatus !== 'active'),
+				color: 'danger' as const,
+				icon: 'Shield',
+				title: `${filteredData.filter((u) => u.accountStatus !== 'active').length} restricted account${
+					filteredData.filter((u) => u.accountStatus !== 'active').length === 1
+						? ''
+						: 's'
+				}`,
+				description: 'Suspended and banned users are highlighted below for quick follow-up.',
+			},
+			{
+				key: 'healthy',
+				show:
+					filteredData.length > 0 &&
+					filteredData.every(
+						(u) => u.accountStatus === 'active' && u.license?.status !== 'pending',
+					),
+				color: 'success' as const,
+				icon: 'TaskAlt',
+				title: 'User queue looks healthy',
+				description: 'No pending license reviews or restricted accounts in the current filter set.',
+			},
+		].filter((item) => item.show),
+		[filteredData],
 	);
 
 	const handleStatusChange = async (userId: string, status: AccountStatus) => {
@@ -285,6 +326,16 @@ const UsersListPage = () => {
 				<div className='row h-100'>
 					<div className='col-12'>
 						<Card stretch>
+							<CardHeader className='border-0 px-4 px-xl-5 pt-4 pt-xl-5 pb-0'>
+								<CardLabel icon='Groups' iconColor='primary'>
+									<CardTitle tag='div' className='h4 mb-0'>
+										User Management
+									</CardTitle>
+									<CardSubTitle tag='div'>
+										Live admin view for account health, license verification, and user actions
+									</CardSubTitle>
+								</CardLabel>
+							</CardHeader>
 							<CardBody isScrollable className='p-4 p-xl-5'>
 								{isLoading ? (
 									<div className='d-flex justify-content-center align-items-center py-5'>
@@ -301,6 +352,21 @@ const UsersListPage = () => {
 									</div>
 								) : (
 									<>
+										{dashboardAlerts.length > 0 && (
+											<div className='d-flex flex-column gap-3 mb-4'>
+												{dashboardAlerts.map((item) => (
+													<Alert
+														key={item.key}
+														color={item.color}
+														icon={item.icon}
+														isLight
+														className='mb-0 rounded-4 border-0'>
+														<div className='fw-semibold mb-1'>{item.title}</div>
+														<div className='small'>{item.description}</div>
+													</Alert>
+												))}
+											</div>
+										)}
 										<div className='row g-3 mb-4'>
 											{summaryItems.map((item) => (
 												<div key={item.label} className='col-sm-6 col-xl-3'>
