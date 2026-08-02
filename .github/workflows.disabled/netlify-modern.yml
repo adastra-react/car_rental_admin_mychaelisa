@@ -1,0 +1,41 @@
+name: Netlify builds Modern
+
+on:
+    push:
+        branches: [master]
+    workflow_dispatch:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        environment:
+            name: Modern Version
+            url: https://facit-modern.netlify.app
+
+        strategy:
+            matrix:
+                node-version: [20.x]
+
+        steps:
+            - uses: actions/checkout@v2
+            - name: Use Node.js ${{ matrix.node-version }} 👷🏼
+              uses: actions/setup-node@v1
+              with:
+                  node-version: ${{ matrix.node-version }}
+
+            - name: Install yarn dependencies 📦
+              run: yarn install --frozen-lockfile
+
+            - name: Build site 🛠
+              run: yarn build
+
+            - name: Netlify deployment 🚀
+              uses: nwtgck/actions-netlify@v1.2.2
+              with:
+                  publish-dir: './build'
+                  production-branch: 'master'
+                  netlify-config-path: './netlify.toml'
+              env:
+                  NETLIFY_SITE_ID: ${{ secrets.NETLIFY_MODERN_SITE_ID }}
+                  NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN_2025 }}

@@ -1,0 +1,43 @@
+name: Netlify builds Minimal
+
+on:
+    push:
+        branches: ['DEMO/MINIMAL']
+    repository_dispatch:
+        types: [created, updated, deleted]
+    workflow_dispatch:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        environment:
+            name: Minimal Version
+            url: https://facit-minimal-demo.netlify.app
+
+        strategy:
+            matrix:
+                node-version: [20.x]
+
+        steps:
+            - uses: actions/checkout@v2
+            - name: Use Node.js ${{ matrix.node-version }} 👷🏼
+              uses: actions/setup-node@v1
+              with:
+                  node-version: ${{ matrix.node-version }}
+
+            - name: Install yarn dependencies 📦
+              run: yarn install --frozen-lockfile
+
+            - name: Build site 🛠
+              run: yarn build
+
+            - name: Netlify deployment 🚀
+              uses: nwtgck/actions-netlify@v1.2.2
+              with:
+                  publish-dir: './build'
+                  production-branch: 'DEMO/MINIMAL'
+                  netlify-config-path: './netlify.toml'
+              env:
+                  NETLIFY_SITE_ID: ${{ secrets.NETLIFY_MINIMAL_SITE_ID }}
+                  NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN_2025 }}
